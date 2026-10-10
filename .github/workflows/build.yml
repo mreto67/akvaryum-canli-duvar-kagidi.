@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Java
@@ -23,15 +23,23 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Extract project
-        run: unzip AkvaryumCanliDuvarKagidi.zip -d extracted
+      - name: Extract Android project
+        run: |
+          unzip AkvaryumCanliDuvarKagidi.zip -d extracted
+          find extracted -maxdepth 4 -type f | head -100
 
       - name: Build debug APK
-        run: gradle -p extracted/AkvaryumCanliDuvarKagidi assembleDebug
+        run: |
+          PROJECT_DIR="$(find extracted -type f -name settings.gradle -o -name settings.gradle.kts | head -1)"
+          if [ -z "$PROJECT_DIR" ]; then
+            echo "Gradle settings file not found"
+            exit 1
+          fi
+          gradle -p "$(dirname "$PROJECT_DIR")" assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Akvaryum-APK
-          path: extracted/AkvaryumCanliDuvarKagidi/app/build/outputs/apk/debug/*.apk
+          path: extracted/**/build/outputs/apk/debug/*.apk
           if-no-files-found: error
