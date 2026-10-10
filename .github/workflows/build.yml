@@ -26,40 +26,31 @@ jobs:
       - name: Extract Android project
         run: unzip AkvaryumCanliDuvarKagidi.zip -d extracted
 
-      - name: Fix Java and Kotlin targets
+      - name: Fix Java and Kotlin compatibility
         run: |
           python3 - <<'PY'
           from pathlib import Path
 
-          p = Path("extracted/AkvaryumCanliDuvarKagidi/app/build.gradle.kts")
+          root = Path("extracted/AkvaryumCanliDuvarKagidi")
+          p = root / "app" / "build.gradle.kts"
           s = p.read_text()
-          s = s.replace(
-              'android {\n',
-              '''android {
-              compileOptions {
-                  sourceCompatibility = JavaVersion.VERSION_17
-                  targetCompatibility = JavaVersion.VERSION_17
-              }
-          ''',
-              1
-          )
-          s = s.replace(
-              '\n}',
-              '''
-              kotlinOptions {
-                  jvmTarget = "17"
-              }
-          }
-          ''',
-              1
-          )
+
+          s = s.replace('kotlinOptions {', 'compileOptions {')
+          s = s.replace('jvmTarget = "17"', 'sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17')
+
+          if 'targetCompatibility = JavaVersion.VERSION_17' not in s:
+              s = s.replace(
+                  'android {',
+                  'android {\n    compileOptions {\n        sourceCompatibility = JavaVersion.VERSION_17\n        targetCompatibility = JavaVersion.VERSION_17\n    }',
+                  1
+              )
+
           p.write_text(s)
           print(s)
           PY
 
       - name: Build debug APK
-        run: |
-          gradle -p extracted/AkvaryumCanliDuvarKagidi assembleDebug
+        run: gradle -p extracted/AkvaryumCanliDuvarKagidi assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
