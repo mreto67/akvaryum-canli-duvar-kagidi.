@@ -24,22 +24,46 @@ jobs:
           gradle-version: '8.13'
 
       - name: Extract Android project
+        run: unzip AkvaryumCanliDuvarKagidi.zip -d extracted
+
+      - name: Fix Java and Kotlin targets
         run: |
-          unzip AkvaryumCanliDuvarKagidi.zip -d extracted
-          find extracted -maxdepth 4 -type f | head -100
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("extracted/AkvaryumCanliDuvarKagidi/app/build.gradle.kts")
+          s = p.read_text()
+          s = s.replace(
+              'android {\n',
+              '''android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+          ''',
+              1
+          )
+          s = s.replace(
+              '\n}',
+              '''
+              kotlinOptions {
+                  jvmTarget = "17"
+              }
+          }
+          ''',
+              1
+          )
+          p.write_text(s)
+          print(s)
+          PY
 
       - name: Build debug APK
         run: |
-          PROJECT_DIR="$(find extracted -type f -name settings.gradle -o -name settings.gradle.kts | head -1)"
-          if [ -z "$PROJECT_DIR" ]; then
-            echo "Gradle settings file not found"
-            exit 1
-          fi
-          gradle -p "$(dirname "$PROJECT_DIR")" assembleDebug
+          gradle -p extracted/AkvaryumCanliDuvarKagidi assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: Akvaryum-APK
-          path: extracted/**/build/outputs/apk/debug/*.apk
+          path: extracted/AkvaryumCanliDuvarKagidi/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
